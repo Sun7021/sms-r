@@ -1,0 +1,8 @@
+{
+  "name": "Smart Billing Software-Restaurant",
+  "description": "Enterprise-level restaurant management system with AI-powered sales prediction, menu optimization, and multi-branch support.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
