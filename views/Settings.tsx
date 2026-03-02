@@ -41,8 +41,8 @@ const Settings: React.FC = () => {
   const addApiKey = () => {
     if (!newKeyInput.nickname || !newKeyInput.key) return;
     
-    // Deactivate previous key of the same type and provider if adding a new active one
-    const updatedBase = apiKeys.map(k => (k.type === newKeyInput.type && k.provider === newKeyInput.provider) ? { ...k, isActive: false } : k);
+    // Deactivate ALL previous keys of the same type (Slot) regardless of provider
+    const updatedBase = apiKeys.map(k => k.type === newKeyInput.type ? { ...k, isActive: false } : k);
     
     const newRecord: ApiKeyRecord = {
       id: Date.now().toString(),
