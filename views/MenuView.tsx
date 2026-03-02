@@ -36,9 +36,9 @@ const MenuView: React.FC = () => {
     try {
       const url = await generateFoodImage(editingItem.name, editingItem.description || '');
       setEditingItem(prev => ({ ...prev, image: url }));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("AI Generation failed. Check your API key or connection.");
+      alert(`AI Generation failed: ${err.message || "Check your API key or connection."}`);
     } finally {
       setIsGenerating(false);
     }

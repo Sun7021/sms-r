@@ -84,28 +84,49 @@ export const getSalesPrediction = async (history: any[]) => {
 };
 
 export const generateFoodImage = async (itemName: string, description: string) => {
-  const { provider, client } = getAIClient('IMAGE');
-  const prompt = `A professional high-quality studio food photograph of ${itemName}. ${description}. Cinematic lighting, white background, 4k resolution.`;
+  try {
+    const { provider, client } = getAIClient('IMAGE');
+    const itemDesc = description || "Delicious traditional cuisine";
+    const prompt = `A professional high-quality studio food photograph of ${itemName}. ${itemDesc}. Cinematic lighting, white background, 4k resolution.`;
 
-  if (provider === 'OPENAI') {
-    const response = await client.images.generate({
-      model: "dall-e-3",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1024",
-    });
-    return response.data[0].url;
-  } else {
-    const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts: [{ text: prompt }] },
-      config: { imageConfig: { aspectRatio: "1:1" } }
-    });
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    if (provider === 'OPENAI') {
+      const response = await client.images.generate({
+        model: "dall-e-3",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+      });
+      if (response.data && response.data[0] && response.data[0].url) {
+        return response.data[0].url;
+      }
+      throw new Error("OpenAI returned an empty response");
+    } else {
+      const response = await client.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: prompt }] },
+        config: { imageConfig: { aspectRatio: "1:1" } }
+      });
+
+      if (!response.candidates || response.candidates.length === 0) {
+        throw new Error("Gemini returned no candidates. This might be due to safety filters or region restrictions.");
+      }
+
+      const candidate = response.candidates[0];
+      if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+        throw new Error(`Gemini failed with reason: ${candidate.finishReason}`);
+      }
+
+      for (const part of candidate.content.parts) {
+        if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+      }
     }
+    throw new Error("No image data found in the AI response");
+  } catch (error: any) {
+    console.error("AI Generation Error:", error);
+    // Extract more meaningful error message if possible
+    const message = error.message || "Unknown AI error";
+    throw new Error(message);
   }
-  throw new Error("Failed to generate image");
 };
 
 export const parseVoiceCommand = async (command: string, menuItems: string[]) => {
