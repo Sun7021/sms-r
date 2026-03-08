@@ -101,30 +101,45 @@ export const generateFoodImage = async (itemName: string, description: string) =
       }
       throw new Error("OpenAI returned an empty response");
     } else {
+      // Using gemini-3.1-flash-image-preview for better availability and quality
       const response = await client.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3.1-flash-image-preview',
         contents: { parts: [{ text: prompt }] },
-        config: { imageConfig: { aspectRatio: "1:1" } }
+        config: { 
+          imageConfig: { 
+            aspectRatio: "1:1",
+            imageSize: "1K" 
+          } 
+        }
       });
 
       if (!response.candidates || response.candidates.length === 0) {
-        throw new Error("Gemini returned no candidates. This might be due to safety filters or region restrictions.");
+        throw new Error("Gemini returned no candidates. This might be due to safety filters, region restrictions, or billing status.");
       }
 
       const candidate = response.candidates[0];
       if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-        throw new Error(`Gemini failed with reason: ${candidate.finishReason}`);
+        throw new Error(`Gemini failed with reason: ${candidate.finishReason}. Check if the prompt violates safety policies.`);
       }
 
       for (const part of candidate.content.parts) {
         if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
-    throw new Error("No image data found in the AI response");
+    throw new Error("No image data found in the AI response. Ensure your API key has permissions for image generation.");
   } catch (error: any) {
-    console.error("AI Generation Error:", error);
-    // Extract more meaningful error message if possible
-    const message = error.message || "Unknown AI error";
+    console.error("AI Generation Error Details:", error);
+    
+    // Extract more meaningful error message from various SDK error formats
+    let message = error.message || "Unknown AI error";
+    
+    // Handle OpenAI specific error formats
+    if (error.error && error.error.message) {
+      message = error.error.message;
+    } else if (error.response && error.response.data && error.response.data.error) {
+      message = error.response.data.error.message;
+    }
+    
     throw new Error(message);
   }
 };
