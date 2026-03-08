@@ -130,14 +130,31 @@ export const generateFoodImage = async (itemName: string, description: string) =
   } catch (error: any) {
     console.error("AI Generation Error Details:", error);
     
-    // Extract more meaningful error message from various SDK error formats
     let message = error.message || "Unknown AI error";
     
+    // Try to parse JSON error messages often returned by Google/OpenAI SDKs
+    try {
+      if (typeof message === 'string' && (message.startsWith('{') || message.includes('{"error"'))) {
+        const jsonStart = message.indexOf('{');
+        const parsed = JSON.parse(message.substring(jsonStart));
+        if (parsed.error && parsed.error.message) {
+          message = parsed.error.message;
+        }
+      }
+    } catch (e) {
+      // Not JSON, keep original message
+    }
+
     // Handle OpenAI specific error formats
     if (error.error && error.error.message) {
       message = error.error.message;
     } else if (error.response && error.response.data && error.response.data.error) {
       message = error.response.data.error.message;
+    }
+
+    // User-friendly translation for common errors
+    if (message.includes("quota") || message.includes("RESOURCE_EXHAUSTED") || message.includes("limit")) {
+      message = "AI Quota Exceeded: Your API key has reached its billing limit or free tier quota. Please check your billing settings at ai.google.dev or platform.openai.com.";
     }
     
     throw new Error(message);
